@@ -146,3 +146,5 @@ print("All tests passed!")
 print(f"  - Test recording: output/test_recording.wav")
 print(f"  - Transcription:  output/test_transcription.txt")
 print("=" * 60)
+
+# ITS WORKINGGGGGG!!! 
