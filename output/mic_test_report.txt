@@ -1,0 +1,10 @@
+MICROPHONE TEST REPORT
+========================================
+
+Sample rate: 16000 Hz
+Duration: 3 seconds
+Samples recorded: 48000
+Max amplitude: 1149
+Mean amplitude: 159.5
+
+STATUS: OK - Microphone working
