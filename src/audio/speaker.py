@@ -12,6 +12,7 @@ class TTSSpeaker:
 
     # Voice IDs
     VOICES = {
+        "Rex Thunder": "mtrellq69YZsNwzUSyXh",  # Deep, powerful
         "rachel": "EXAVITQu4vr4xnSDxMaL",  # Calm, professional (default)
         "adam": "pNInz6obpgDQGcFmaJgB",  # Deep, authoritative
         "bella": "EXAVITQu4vr4xnSDxMaL",  # Warm, friendly

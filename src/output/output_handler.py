@@ -23,7 +23,7 @@ class OutputHandler:
     def __init__(
         self,
         elevenlabs_api_key: str,
-        voice: str = "rachel",
+        voice: str = "Rex Thunder",
         mode: OutputMode = OutputMode.BOTH,
         output_dir: Optional[Path] = None,
     ):
