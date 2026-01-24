@@ -1,0 +1,9 @@
+Audio file: output\test_recording.wav
+Duration: 2s
+Max amplitude: 2293
+Mean amplitude: 167.3
+Detected language: en
+Language probability: 1.00
+
+Transcription:
+Hello hello

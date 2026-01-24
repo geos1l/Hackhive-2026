@@ -5,6 +5,7 @@ import tempfile
 from scipy.io.wavfile import write as wav_write
 import numpy as np
 from typing import Optional
+import os
 
 
 class WhisperTranscriber:
@@ -28,6 +29,8 @@ class WhisperTranscriber:
         model_size: str = "base.en",
         device: str = "auto",
         compute_type: str = "auto",
+        download_dir: Optional[str] = None,
+        local_files_only: bool = False,
     ):
         """
         Initialize local Whisper model.
@@ -37,8 +40,20 @@ class WhisperTranscriber:
                        Add '.en' suffix for English-only models
             device: Device to use ('cpu', 'cuda', 'auto')
             compute_type: Computation type ('float16', 'int8', 'auto')
+            download_dir: Explicit directory to cache models (prevents re-downloads)
+            local_files_only: If True, only use cached models (no downloads)
         """
         print(f"Loading Whisper model '{model_size}'...")
+
+        # Set explicit cache directory to prevent re-downloads
+        if download_dir is None:
+            # Use project-local cache or system cache
+            cache_base = Path.home() / ".cache" / "whisper"
+            download_dir = str(cache_base)
+            cache_base.mkdir(parents=True, exist_ok=True)
+            print(f"Using cache directory: {download_dir}")
+        else:
+            Path(download_dir).mkdir(parents=True, exist_ok=True)
 
         # Auto-detect best settings
         if device == "auto":
@@ -47,12 +62,24 @@ class WhisperTranscriber:
         if compute_type == "auto":
             compute_type = "int8"  # Good balance of speed and quality on CPU
 
-        self.model = WhisperModel(
-            model_size,
-            device=device,
-            compute_type=compute_type,
-        )
-        print(f"Whisper model loaded on {device}")
+        # Initialize model with explicit cache directory
+        # This prevents re-downloading if model is already cached
+        try:
+            self.model = WhisperModel(
+                model_size,
+                device=device,
+                compute_type=compute_type,
+                download_root=download_dir,  # Explicit cache location prevents re-downloads
+                local_files_only=local_files_only,  # Prevent downloads if True
+            )
+            print(f"Whisper model loaded on {device}")
+        except Exception as e:
+            if local_files_only:
+                raise RuntimeError(
+                    f"Model '{model_size}' not found in cache ({download_dir}). "
+                    f"Set local_files_only=False to download it."
+                ) from e
+            raise
 
     def transcribe_file(
         self,
