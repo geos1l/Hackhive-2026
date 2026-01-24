@@ -1,9 +1,9 @@
 Audio file: output\test_recording.wav
 Duration: 2s
-Max amplitude: 2293
-Mean amplitude: 167.3
+Max amplitude: 1894
+Mean amplitude: 195.5
 Detected language: en
 Language probability: 1.00
 
 Transcription:
-Hello hello
+Bonjour, bonjour, bonjour, go back in.
