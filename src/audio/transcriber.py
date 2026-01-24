@@ -142,3 +142,55 @@ class WhisperTranscriber:
         finally:
             # Clean up temp file
             temp_path.unlink(missing_ok=True)
+
+    def transcribe_array_streaming(
+        self,
+        audio: np.ndarray,
+        sample_rate: int = 16000,
+        language: Optional[str] = "en",
+    ) -> str:
+        """
+        Transcribe numpy audio array with real-time segment display.
+        
+        Args:
+            audio: Audio data as numpy array (int16 or float32)
+            sample_rate: Sample rate of audio
+            language: Language code or None for auto-detect
+            
+        Returns:
+            Transcribed text string
+        """
+        # Convert to float32 if needed (faster-whisper expects float32)
+        if audio.dtype == np.int16:
+            audio_float = audio.astype(np.float32) / 32768.0
+        else:
+            audio_float = audio.astype(np.float32)
+
+        # Save to temporary file (faster-whisper works best with files)
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+            # Save as int16 WAV
+            audio_int16 = (audio_float * 32768).astype(np.int16)
+            wav_write(f.name, sample_rate, audio_int16)
+            temp_path = Path(f.name)
+
+        try:
+            print("Transcribing...")
+            segments, info = self.model.transcribe(
+                str(temp_path),
+                language=language,
+                beam_size=5,
+                vad_filter=True,  # Filter out silence
+            )
+            
+            # Display segments as they're processed
+            full_text = []
+            for i, segment in enumerate(segments, 1):
+                text = segment.text.strip()
+                if text:  # Only display non-empty segments
+                    full_text.append(text)
+                    print(f"  [{i}] {text}")
+            
+            return " ".join(full_text).strip()
+        finally:
+            # Clean up temp file
+            temp_path.unlink(missing_ok=True)

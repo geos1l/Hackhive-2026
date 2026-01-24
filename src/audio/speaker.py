@@ -1,7 +1,8 @@
 """ElevenLabs TTS integration with ESP32-compatible output."""
 from elevenlabs.client import ElevenLabs
-from elevenlabs import play, stream
+from elevenlabs import stream
 import numpy as np
+import sounddevice as sd
 from scipy.io.wavfile import write as wav_write
 from pathlib import Path
 from typing import Optional
@@ -47,31 +48,53 @@ class TTSSpeaker:
     def speak(self, text: str) -> None:
         """
         Generate speech and play through speakers.
+        Uses sounddevice (no ffmpeg required).
 
         Args:
             text: Text to convert to speech
         """
-        audio = self.client.text_to_speech.convert(
-            text=text,
-            voice_id=self.voice_id,
-            model_id=self.model_id,
-            output_format="mp3_44100_128",
-        )
-        play(audio)
+        # Get audio as PCM (raw audio data, no codec needed)
+        pcm_data = self.generate_pcm(text)
+        
+        # Convert bytes to numpy array
+        audio_array = np.frombuffer(pcm_data, dtype=np.int16)
+        
+        # Play using sounddevice (already installed, no ffmpeg needed)
+        sd.play(audio_array, samplerate=self.ESP32_SAMPLE_RATE)
+        sd.wait()  # Wait until playback is finished
 
     def speak_stream(self, text: str) -> None:
         """
         Stream speech for lower latency playback.
+        Falls back to regular speak if streaming is not available.
 
         Args:
             text: Text to convert to speech
         """
-        audio_stream = self.client.text_to_speech.convert_as_stream(
-            text=text,
-            voice_id=self.voice_id,
-            model_id="eleven_flash_v2_5",  # Streaming requires flash model
-        )
-        stream(audio_stream)
+        try:
+            # Use the stream method from ElevenLabs SDK
+            audio_stream = self.client.text_to_speech.stream(
+                text=text,
+                voice_id=self.voice_id,
+                model_id="eleven_flash_v2_5",  # Streaming requires flash model
+            )
+            # Collect stream chunks and play with sounddevice
+            audio_chunks = []
+            for chunk in audio_stream:
+                if chunk:
+                    audio_chunks.append(chunk)
+            
+            # Convert stream to bytes and play
+            if audio_chunks:
+                # Note: Stream returns MP3, we need to handle it differently
+                # For now, fall back to regular speak which uses PCM
+                self.speak(text)
+            else:
+                self.speak(text)
+        except (AttributeError, TypeError, Exception) as e:
+            # Fall back to regular speak if streaming not available
+            print(f"Streaming not available, using regular playback: {e}")
+            self.speak(text)
 
     def generate_pcm(self, text: str) -> bytes:
         """

@@ -10,13 +10,18 @@ Audio I/O Pipeline Test:
 """
 import argparse
 import sys
+import time
 from pathlib import Path
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import keyboard
+
 from config.settings import Settings
 from src.audio import AudioInput
+from src.audio.recorder import MicrophoneRecorder
+from src.audio.transcriber import WhisperTranscriber
 from src.output import OutputHandler, OutputMode
 
 
@@ -206,9 +211,96 @@ def interactive_loop():
             print(f"Error: {e}")
 
 
+def push_to_talk_loop():
+    """
+    Main push-to-talk voice assistant loop.
+    
+    Flow:
+    1. Wait for spacebar press
+    2. Record while spacebar is held (up to 30s max)
+    3. Transcribe with real-time segment display
+    4. Show final transcription
+    5. Convert to speech and play immediately
+    6. Loop back to step 1
+    """
+    # Validate settings
+    missing = Settings.validate()
+    if missing:
+        print(f"ERROR: Missing required API keys: {missing}")
+        print("Please copy .env.example to .env and fill in your API keys")
+        sys.exit(1)
+
+    # Determine whisper model
+    whisper_model = Settings.WHISPER_MODEL
+
+    # Initialize components
+    print("Initializing audio components...")
+    recorder = MicrophoneRecorder()
+    transcriber = WhisperTranscriber(model_size=whisper_model)
+    output_handler = OutputHandler(
+        Settings.ELEVENLABS_API_KEY, mode=OutputMode.BOTH
+    )
+
+    print("\n" + "=" * 60)
+    print("PUSH-TO-TALK VOICE ASSISTANT")
+    print("=" * 60)
+    print("Hold SPACEBAR to record (max 30s)")
+    print("Press ESC to quit")
+    print("=" * 60 + "\n")
+
+    try:
+        while True:
+            # Check for quit (ESC key)
+            if keyboard.is_pressed('esc'):
+                print("\nExiting...")
+                break
+            
+            # Wait for spacebar press
+            if keyboard.is_pressed('space'):
+                # Record while held
+                audio = recorder.record_while_held(max_duration=30.0)
+                
+                if len(audio) == 0:
+                    print("No audio recorded. Try again.")
+                    time.sleep(0.5)  # Brief pause to avoid rapid re-triggering
+                    continue
+                
+                # Transcribe with real-time segment display
+                text = transcriber.transcribe_array_streaming(audio)
+                
+                if not text:
+                    print("No transcription available. Try again.")
+                    time.sleep(0.5)
+                    continue
+                
+                print(f"\nFinal transcription: {text}\n")
+                
+                # Future: Router AI integration point
+                # response = router_ai.process(text)  # <-- This will be added later
+                response = text  # Placeholder for now
+                
+                # TTS and play immediately
+                print("Generating speech...")
+                output_handler.output(response, mode=OutputMode.BOTH)
+                print("\nReady for next recording. Hold SPACEBAR to record again.\n")
+                
+                # Brief pause to avoid rapid re-triggering
+                time.sleep(0.5)
+            
+            # Small sleep to prevent CPU spinning
+            time.sleep(0.05)
+            
+    except KeyboardInterrupt:
+        print("\n\nGoodbye!")
+    except Exception as e:
+        print(f"\nError: {e}")
+        import traceback
+        traceback.print_exc()
+
+
 if __name__ == "__main__":
     # Check if running in interactive mode
     if len(sys.argv) == 1:
-        interactive_loop()
+        push_to_talk_loop()
     else:
         main()

@@ -4,6 +4,8 @@ import numpy as np
 from scipy.io.wavfile import write
 from pathlib import Path
 import tempfile
+import time
+import keyboard
 
 
 class MicrophoneRecorder:
@@ -71,3 +73,44 @@ class MicrophoneRecorder:
         temp_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
         write(temp_file.name, self.SAMPLE_RATE, audio)
         return Path(temp_file.name)
+
+    def record_while_held(self, max_duration: float = 30.0) -> np.ndarray:
+        """
+        Record audio while a key (spacebar) is held down.
+        
+        Args:
+            max_duration: Maximum recording duration in seconds (default: 30.0)
+            
+        Returns:
+            Audio data as numpy array
+        """
+        print("Hold SPACEBAR to record (max 30s)... Release to stop.")
+        
+        # Wait for spacebar press
+        keyboard.wait('space')
+        
+        # Start recording
+        self.start_recording()
+        start_time = time.time()
+        
+        # Monitor while spacebar is held
+        try:
+            while keyboard.is_pressed('space'):
+                elapsed = time.time() - start_time
+                if elapsed >= max_duration:
+                    print(f"\nMax duration ({max_duration}s) reached!")
+                    break
+                # Update display with elapsed time
+                print(f"\rRecording... {elapsed:.1f}s / {max_duration:.0f}s", end='', flush=True)
+                time.sleep(0.1)
+        except KeyboardInterrupt:
+            print("\nRecording interrupted by user")
+        
+        # Stop recording
+        print()  # New line after progress display
+        audio = self.stop_recording()
+        
+        duration = len(audio) / self.SAMPLE_RATE
+        print(f"Recorded {len(audio)} samples ({duration:.2f}s)")
+        
+        return audio

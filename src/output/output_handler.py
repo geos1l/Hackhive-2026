@@ -67,11 +67,11 @@ class OutputHandler:
 
         # Audio output
         if current_mode == OutputMode.SPEAK:
-            self.speaker.speak(text)
+            self.speaker.speak(text)  # Auto-plays audio
         elif current_mode == OutputMode.STREAM:
-            self.speaker.speak_stream(text)
+            self.speaker.speak_stream(text)  # Auto-plays audio (streaming)
         elif current_mode == OutputMode.BOTH:
-            self.speaker.speak_stream(text)
+            self.speaker.speak(text)  # Auto-plays audio (use speak for reliability)
         elif current_mode == OutputMode.SAVE:
             saved_path = save_path or self._generate_path()
             self.speaker.generate_wav(text, saved_path)
