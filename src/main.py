@@ -23,6 +23,7 @@ from src.audio import AudioInput
 from src.audio.recorder import MicrophoneRecorder
 from src.audio.transcriber import WhisperTranscriber
 from src.output import OutputHandler, OutputMode
+from src.services.router_ai import RouterAI
 
 
 def main():
@@ -237,6 +238,7 @@ def push_to_talk_loop():
     print("Initializing audio components...")
     recorder = MicrophoneRecorder()
     transcriber = WhisperTranscriber(model_size=whisper_model)
+    router_ai = RouterAI(Settings.GEMINI_API_KEY)
     output_handler = OutputHandler(
         Settings.ELEVENLABS_API_KEY, mode=OutputMode.BOTH
     )
@@ -275,9 +277,10 @@ def push_to_talk_loop():
                 
                 print(f"\nFinal transcription: {text}\n")
                 
-                # Future: Router AI integration point
-                # response = router_ai.process(text)  # <-- This will be added later
-                response = text  # Placeholder for now
+                # Router AI processing
+                print("Processing with Gemini...")
+                response = router_ai.process(text)
+                print(f"Gemini response: {response}\n")
                 
                 # TTS and play immediately
                 print("Generating speech...")

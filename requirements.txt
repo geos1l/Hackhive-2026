@@ -14,3 +14,6 @@ numpy>=1.24.0
 
 # Input handling
 keyboard>=0.13.5
+
+# Router AI (via OpenRouter)
+openai>=1.0.0

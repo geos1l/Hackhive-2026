@@ -11,7 +11,8 @@ class Settings:
 
     # ElevenLabs - For TTS
     ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY", "")
-
+    # OpenRouter - For Router AI (Gemini via OpenRouter)
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")  # Actually OpenRouter API key
     # Whisper model (local, no API key needed)
     WHISPER_MODEL = os.getenv("WHISPER_MODEL", "base.en")
 
@@ -24,6 +25,7 @@ class Settings:
         """Return list of missing required keys."""
         required = [
             "ELEVENLABS_API_KEY",
+            "GEMINI_API_KEY",
         ]
         return [k for k in required if not getattr(cls, k)]
 
@@ -37,3 +39,8 @@ class Settings:
         status = "+" if value else "x"
         masked = value[:8] + "..." if value else "NOT SET"
         print(f"  [{status}] ELEVENLABS_API_KEY: {masked}")
+
+        value = Settings.GEMINI_API_KEY
+        status = "+" if value else "x"
+        masked = value[:8] + "..." if value else "NOT SET"
+        print(f"  [{status}] GEMINI_API_KEY: {masked}")

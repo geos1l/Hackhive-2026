@@ -28,7 +28,7 @@ def main():
     try:
         speaker = TTSSpeaker(
             api_key=Settings.ELEVENLABS_API_KEY,
-            voice="Rex Thunder",
+            voice="Goat Gemini",
             model="fast"
         )
         print("  TTSSpeaker initialized successfully")
