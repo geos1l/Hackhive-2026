@@ -79,6 +79,9 @@ class RouterAI:
                 "api_key_env": "QWEN_API_KEY",
             },
         }
+
+        # Vision-capable model configuration
+        self._default_vision_model = "qwen/qwen-2.5-vl-72b-instruct"
     
     def _get_categories(self) -> list[str]:
         """Get categories from Supabase (with caching)."""
@@ -199,17 +202,31 @@ Respond with ONLY the category name (exactly as listed above). Do not include an
             return self._model_routing_map["qwen 2.5 vl-72b instruct"]
         return None
     
-    def process(self, user_text: str) -> str:
+    def process(self, user_text: str, image_base64: Optional[str] = None) -> str:
         """
         Process user text: classify, query Supabase, route to best LLM.
-        
+
         Args:
             user_text: Text input from user (from STT)
-            
+            image_base64: Optional base64-encoded image for vision queries
+
         Returns:
             Response text from best LLM
         """
         try:
+            # If image is provided, route directly to vision model
+            if image_base64:
+                print("Image detected, routing to vision model...")
+                model_name = self._default_vision_model
+                # Use the same OpenRouter API key used for all other requests
+                api_key = Settings.GEMINI_API_KEY
+
+                if not api_key:
+                    return "Error: OpenRouter API key (GEMINI_API_KEY) not configured in .env"
+
+                print(f"Using vision model: {model_name}")
+                provider = self._get_provider("openrouter", model_name, api_key)
+                return provider.generate(user_text, image_base64=image_base64)
             # Step 1: Classify category using Gemini
             print(f"Classifying prompt category...")
             category = self._classify_category(user_text)

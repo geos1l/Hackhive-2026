@@ -113,21 +113,40 @@ class OpenRouterProvider(LLMProvider):
         )
         self.model_name = model_name
     
-    def generate(self, prompt: str, **kwargs) -> str:
+    def generate(self, prompt: str, image_base64: Optional[str] = None, **kwargs) -> str:
         """
         Generate response using OpenRouter.
-        
+
         Args:
             prompt: User prompt
+            image_base64: Optional base64-encoded image for vision models
             **kwargs: Additional parameters
-            
+
         Returns:
             Generated response text
         """
         try:
+            # Build message content
+            if image_base64:
+                # Multimodal message format (OpenAI-compatible)
+                content = [
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{image_base64}"
+                        }
+                    },
+                    {
+                        "type": "text",
+                        "text": prompt
+                    }
+                ]
+            else:
+                content = prompt
+
             response = self.client.chat.completions.create(
                 model=self.model_name,
-                messages=[{"role": "user", "content": prompt}],
+                messages=[{"role": "user", "content": content}],
                 **kwargs
             )
             return response.choices[0].message.content.strip()

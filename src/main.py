@@ -16,12 +16,14 @@ from pathlib import Path
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import keyboard
+from typing import Optional
+from pynput import keyboard
 
 from config.settings import Settings
 from src.audio import AudioInput
-from src.audio.recorder import MicrophoneRecorder
+from src.audio.recorder import MicrophoneRecorder, get_key_tracker
 from src.audio.transcriber import WhisperTranscriber
+from src.camera import WebcamCapture
 from src.output import OutputHandler, OutputMode
 from src.services.router_ai import RouterAI
 
@@ -251,23 +253,43 @@ def push_to_talk_loop():
         Settings.ELEVENLABS_API_KEY, mode=OutputMode.BOTH
     )
 
+    # Initialize webcam capture
+    webcam = WebcamCapture()
+    captured_image: Optional[str] = None  # Stores base64 image until used
+
     print("\n" + "=" * 60)
-    print("PUSH-TO-TALK VOICE ASSISTANT")
+    print("PUSH-TO-TALK VOICE ASSISTANT (with Vision)")
     print("=" * 60)
     print("Hold SPACEBAR to record (max 30s)")
+    print("Press 'C' to capture image from webcam")
     print("Press 'S' during audio playback to stop")
     print("Press ESC to quit")
     print("=" * 60 + "\n")
 
+    # Get the key tracker and start it
+    key_tracker = get_key_tracker()
+    key_tracker.start()
+
     try:
         while True:
             # Check for quit (ESC key)
-            if keyboard.is_pressed('esc'):
+            if key_tracker.is_pressed(keyboard.Key.esc):
                 print("\nExiting...")
                 break
-            
+
+            # Check for camera capture (C key)
+            if key_tracker.is_pressed(keyboard.KeyCode.from_char('c')):
+                print("\nCapturing image from webcam...")
+                captured_image = webcam.capture_as_base64()
+                if captured_image:
+                    print("Image captured! Hold SPACEBAR to ask about it.")
+                else:
+                    print("Failed to capture image. Try again.")
+                time.sleep(0.5)  # Debounce
+                continue
+
             # Wait for spacebar press
-            if keyboard.is_pressed('space'):
+            if key_tracker.is_pressed(keyboard.Key.space):
                 # Record while held
                 audio = recorder.record_while_held(max_duration=30.0)
                 
@@ -286,10 +308,16 @@ def push_to_talk_loop():
                 
                 print(f"\nFinal transcription: {text}\n")
                 
-                # Router AI processing
-                print("Processing with Gemini...")
-                response = router_ai.process(text)
-                print(f"Gemini response: {response}\n")
+                # Router AI processing (with optional image)
+                print("Processing with AI...")
+                response = router_ai.process(text, image_base64=captured_image)
+
+                # Clear captured image after use
+                if captured_image:
+                    print("(Image context used)")
+                    captured_image = None
+
+                print(f"AI response: {response}\n")
                 
                 # TTS and play immediately
                 print("Generating speech...")
@@ -298,7 +326,7 @@ def push_to_talk_loop():
                 
                 # Monitor for stop key while audio is playing
                 while output_handler.speaker.is_playing():
-                    if keyboard.is_pressed('s'):
+                    if key_tracker.is_pressed(keyboard.KeyCode.from_char('s')):
                         print("\n✓ Audio playback stopped.")
                         output_handler.speaker.stop()
                         break
@@ -318,6 +346,8 @@ def push_to_talk_loop():
         print(f"\nError: {e}")
         import traceback
         traceback.print_exc()
+    finally:
+        key_tracker.stop()
 
 
 if __name__ == "__main__":

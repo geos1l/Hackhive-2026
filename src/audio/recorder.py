@@ -5,7 +5,54 @@ from scipy.io.wavfile import write
 from pathlib import Path
 import tempfile
 import time
-import keyboard
+import threading
+from pynput import keyboard
+
+
+class KeyStateTracker:
+    """Tracks the state of keyboard keys using pynput."""
+
+    def __init__(self):
+        self._pressed_keys = set()
+        self._lock = threading.Lock()
+        self._listener = None
+
+    def _on_press(self, key):
+        with self._lock:
+            self._pressed_keys.add(key)
+
+    def _on_release(self, key):
+        with self._lock:
+            self._pressed_keys.discard(key)
+
+    def start(self):
+        """Start the keyboard listener."""
+        if self._listener is None:
+            self._listener = keyboard.Listener(
+                on_press=self._on_press,
+                on_release=self._on_release
+            )
+            self._listener.start()
+
+    def stop(self):
+        """Stop the keyboard listener."""
+        if self._listener:
+            self._listener.stop()
+            self._listener = None
+
+    def is_pressed(self, key):
+        """Check if a key is currently pressed."""
+        with self._lock:
+            return key in self._pressed_keys
+
+    def wait_for_key(self, key):
+        """Block until the specified key is pressed."""
+        while not self.is_pressed(key):
+            time.sleep(0.05)
+
+
+# Global key tracker instance
+_key_tracker = KeyStateTracker()
 
 
 class MicrophoneRecorder:
@@ -77,25 +124,28 @@ class MicrophoneRecorder:
     def record_while_held(self, max_duration: float = 30.0) -> np.ndarray:
         """
         Record audio while a key (spacebar) is held down.
-        
+
         Args:
             max_duration: Maximum recording duration in seconds (default: 30.0)
-            
+
         Returns:
             Audio data as numpy array
         """
         print("Hold SPACEBAR to record (max 30s)... Release to stop.")
-        
+
+        # Start the key tracker
+        _key_tracker.start()
+
         # Wait for spacebar press
-        keyboard.wait('space')
-        
+        _key_tracker.wait_for_key(keyboard.Key.space)
+
         # Start recording
         self.start_recording()
         start_time = time.time()
-        
+
         # Monitor while spacebar is held
         try:
-            while keyboard.is_pressed('space'):
+            while _key_tracker.is_pressed(keyboard.Key.space):
                 elapsed = time.time() - start_time
                 if elapsed >= max_duration:
                     print(f"\nMax duration ({max_duration}s) reached!")
@@ -105,12 +155,17 @@ class MicrophoneRecorder:
                 time.sleep(0.1)
         except KeyboardInterrupt:
             print("\nRecording interrupted by user")
-        
+
         # Stop recording
         print()  # New line after progress display
         audio = self.stop_recording()
-        
+
         duration = len(audio) / self.SAMPLE_RATE
         print(f"Recorded {len(audio)} samples ({duration:.2f}s)")
-        
+
         return audio
+
+
+def get_key_tracker() -> KeyStateTracker:
+    """Get the global key tracker instance."""
+    return _key_tracker
