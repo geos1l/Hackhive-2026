@@ -74,6 +74,10 @@ class RouterAI:
                 "model": "google/gemini-2.5-flash-lite",
                 "api_key_env": "GEMINI_API_KEY",
             },
+            "qwen 2.5 vl-72b instruct": {
+                "model": "qwen/qwen-2.5-vl-72b-instruct",
+                "api_key_env": "QWEN_API_KEY",
+            },
         }
     
     def _get_categories(self) -> list[str]:
@@ -191,7 +195,8 @@ Respond with ONLY the category name (exactly as listed above). Do not include an
             return self._model_routing_map["nematron ultra 253b"]
         if "gemini" in normalized and "flash" in normalized:
             return self._model_routing_map["gemini flash 2.5 lite"]
-        
+        if "qwen" in normalized and "2.5" in normalized:
+            return self._model_routing_map["qwen 2.5 vl-72b instruct"]
         return None
     
     def process(self, user_text: str) -> str:
