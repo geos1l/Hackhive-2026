@@ -1,0 +1,14 @@
+version: "3.9"
+services:
+  hackhive:
+    build: .
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - ./output:/app/output
+    stdin_open: true
+    tty: true
+    # Linux audio (optional). Remove if not using microphone/speakers.
+    devices:
+      - /dev/snd:/dev/snd
