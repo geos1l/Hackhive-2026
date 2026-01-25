@@ -247,6 +247,7 @@ def push_to_talk_loop():
     print("PUSH-TO-TALK VOICE ASSISTANT")
     print("=" * 60)
     print("Hold SPACEBAR to record (max 30s)")
+    print("Press 'S' during audio playback to stop")
     print("Press ESC to quit")
     print("=" * 60 + "\n")
 
@@ -284,7 +285,17 @@ def push_to_talk_loop():
                 
                 # TTS and play immediately
                 print("Generating speech...")
+                print("Press 'S' to stop audio playback (program will continue)")
                 output_handler.output(response, mode=OutputMode.BOTH)
+                
+                # Monitor for stop key while audio is playing
+                while output_handler.speaker.is_playing():
+                    if keyboard.is_pressed('s'):
+                        print("\n✓ Audio playback stopped.")
+                        output_handler.speaker.stop()
+                        break
+                    time.sleep(0.1)  # Check every 100ms
+                
                 print("\nReady for next recording. Hold SPACEBAR to record again.\n")
                 
                 # Brief pause to avoid rapid re-triggering

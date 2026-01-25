@@ -6,6 +6,8 @@ import sounddevice as sd
 from scipy.io.wavfile import write as wav_write
 from pathlib import Path
 from typing import Optional
+import threading
+import time
 
 
 class TTSSpeaker:
@@ -45,24 +47,53 @@ class TTSSpeaker:
         self.client = ElevenLabs(api_key=api_key)
         self.voice_id = self.VOICES.get(voice, voice)  # Allow custom voice ID
         self.model_id = self.MODELS.get(model, model)
+        self._playback_thread = None
+        self._is_playing = False
+        self._stop_playback = threading.Event()
 
     def speak(self, text: str) -> None:
         """
         Generate speech and play through speakers.
         Uses sounddevice (no ffmpeg required).
+        This method starts playback and returns immediately (non-blocking).
 
         Args:
             text: Text to convert to speech
         """
+        # Stop any currently playing audio
+        self.stop()
+        
         # Get audio as PCM (raw audio data, no codec needed)
         pcm_data = self.generate_pcm(text)
         
         # Convert bytes to numpy array
         audio_array = np.frombuffer(pcm_data, dtype=np.int16)
         
-        # Play using sounddevice (already installed, no ffmpeg needed)
+        # Reset stop event
+        self._stop_playback.clear()
+        self._is_playing = True
+        
+        # Start playback (non-blocking)
         sd.play(audio_array, samplerate=self.ESP32_SAMPLE_RATE)
-        sd.wait()  # Wait until playback is finished
+        
+        # Monitor playback in a separate thread
+        def _monitor_playback():
+            try:
+                while True:
+                    stream = sd.get_stream()
+                    if stream is None or not stream.active:
+                        break
+                    if self._stop_playback.is_set():
+                        sd.stop()
+                        break
+                    time.sleep(0.1)  # Check every 100ms
+            except Exception:
+                pass
+            finally:
+                self._is_playing = False
+        
+        self._playback_thread = threading.Thread(target=_monitor_playback, daemon=True)
+        self._playback_thread.start()
 
     def speak_stream(self, text: str) -> None:
         """
@@ -147,6 +178,27 @@ class TTSSpeaker:
         """
         pcm_data = self.generate_pcm(text)
         return pcm_data, self.ESP32_SAMPLE_RATE
+
+    def stop(self) -> None:
+        """
+        Stop any currently playing audio.
+        """
+        if self._is_playing:
+            self._stop_playback.set()
+            sd.stop()  # Stop sounddevice playback immediately
+            self._is_playing = False
+            # Wait briefly for monitoring thread to finish
+            if self._playback_thread and self._playback_thread.is_alive():
+                self._playback_thread.join(timeout=0.5)
+    
+    def is_playing(self) -> bool:
+        """
+        Check if audio is currently playing.
+        
+        Returns:
+            True if audio is playing, False otherwise
+        """
+        return self._is_playing
 
     def set_voice(self, voice: str) -> bool:
         """
