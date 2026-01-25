@@ -238,7 +238,15 @@ def push_to_talk_loop():
     print("Initializing audio components...")
     recorder = MicrophoneRecorder()
     transcriber = WhisperTranscriber(model_size=whisper_model)
-    router_ai = RouterAI(Settings.GEMINI_API_KEY)
+    
+    # Initialize Router AI with Supabase integration
+    if not Settings.validate_supabase():
+        print("Warning: Supabase credentials not set. Router AI will use Gemini directly.")
+    router_ai = RouterAI(
+        router_api_key=Settings.GEMINI_API_KEY,
+        supabase_url=Settings.SUPABASE_URL,
+        supabase_key=Settings.SUPABASE_KEY
+    )
     output_handler = OutputHandler(
         Settings.ELEVENLABS_API_KEY, mode=OutputMode.BOTH
     )

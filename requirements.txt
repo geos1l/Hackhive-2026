@@ -17,3 +17,9 @@ keyboard>=0.13.5
 
 # Router AI (via OpenRouter)
 openai>=1.0.0
+
+# Database
+supabase>=2.0.0
+
+# LLM Providers (optional - add as needed)
+anthropic>=0.18.0
