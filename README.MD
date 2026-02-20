@@ -1,4 +1,4 @@
-# NeuroRoute
+# AAANG
 
 An intelligent voice assistant that dynamically routes queries to the optimal Large Language Model based on real-time benchmarks. Features ESP32 hardware integration for embedded deployment.
 
