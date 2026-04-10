@@ -30,4 +30,21 @@ An intelligent voice assistant that dynamically routes queries to the optimal La
 
 ---
 
+## Running Locally
+
+```bash
+# 1. Install dependencies
+pip install -r requirements.txt
+
+# 2. Copy .env.example to .env and fill in your API keys
+cp .env.example .env
+
+# 3. Run the assistant
+python src/main.py
+```
+
+You'll need a microphone and speaker connected. Hold **spacebar** to record, release to get a response. Press **C** to capture an image from your webcam for vision queries.
+
+---
+
 **Built at HackHive 2026**
